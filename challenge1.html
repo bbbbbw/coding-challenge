@@ -13,7 +13,6 @@
         background-color: #b3ffb3;
       }
       button {
-        background-color: #ee6868;
         padding-right: 26px;
         border: none;
         color: white;
@@ -123,7 +122,7 @@
         }
         displayMaxTemperature();
       });
-      
+
       /* legends */
       for (var i = 0; i < 11 ; i++) {
         hue.append("rect")
@@ -147,7 +146,7 @@
               .attr("y", margin.top + height - height / 12 * j - rect_height / 2)
               .attr("width", rect_width)
               .attr("height", rect_height)
-              .style("fill", colors[10 - Math.round(max_temp[key] / 4)])
+              .style("fill", colors[10 - Math.ceil(max_temp[key] / 4)])
               .append("svg:title")
               .text("Time: " + key + "; max: " + max_temp[key] + "; min: " + min_temp[key]);
           }
@@ -167,7 +166,7 @@
               .attr("y", margin.top + height - height / 12 * j - rect_height / 2)
               .attr("width", rect_width)
               .attr("height", rect_height)
-              .style("fill", colors[10 - Math.round(min_temp[key] / 4)])
+              .style("fill", colors[10 - Math.ceil(min_temp[key] / 4)])
               .append("svg:title")
               .text("Time: " + key + "; max: " + max_temp[key] + "; min: " + min_temp[key]);
           }
