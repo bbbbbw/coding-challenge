@@ -2,30 +2,177 @@
   <head>
     <meta charset="UTF-8">
     <style>
+      #control {
+        height: 80px;
+        width: 680px;
+        background-color: #e6e6e6;
+      }
+      #display {
+        height: 500px;
+        width: 680px;
+        background-color: #b3ffb3;
+      }
+      button {
+        background-color: #ee6868;
+        padding-right: 26px;
+        border: none;
+        color: white;
+        font-size: 17;
+        margin: 0;
+        padding: 0 12px;
+        width: 80px;
+        cursor: pointer;
+        height: 40px;
+      }
+      #max {
+        position: absolute;
+        top: 30px;
+        left: 45px;
+        border-bottom-left-radius: 8px;
+        border-top-left-radius: 8px;
+      }
+      #min {
+        position: absolute;
+        top: 30px;
+        left: 125px;
+        border-bottom-right-radius: 8px;
+        border-top-right-radius: 8px;
+      }
+      #hue {
+        position: absolute;
+        top: 40px;
+        left: 250px;
+      }
+      #left-label {
+        font-size: 6;
+        position: absolute;
+        top: 20px;
+        left: 240px;
+      }
+      #right-label {
+        font-size: 6;
+        position: absolute;
+        top: 20px;
+        left: 570px;
+      }
     </style>
   </head>
   <body>
-    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
     
-    <div id="control_panel">
-      <svg width="960" height="500" style="background-color: LightCoral"></svg>
+    <div id="control">
+      <label id="left-label">0 Celsius</label>
+      <label id="right-label">40 Celsius</label>
+      <button id="max" onclick="displayMaxTemperature()">Max</button>
+      <button id="min" onclick="displayMinTemperature()">Min</button>
+      <svg id="hue" width="400"></svg>
+    </div>
+    <div id="display">
+      <svg id="display_svg" width="680" height="500"></svg>
     </div>
 
     <script>
-      var svg = d3.select("svg"),
-          margin = {top: 20, right: 20, bottom: 30, left: 50},
+      var tick = ["January", "February", "March", "April", "May", "June", 
+        "July", "August", "September", "October", "November", "Devember"];
+
+      var svg = d3.select("#display_svg"),
+          hue = d3.select("#hue"),
+          margin = {top: 30, right: 20, bottom: 30, left: 70},
           width = svg.attr("width") - margin.left - margin.right,
           height = svg.attr("height") - margin.top - margin.bottom,
           g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
       
-      var parseTime = d3.timeParse("%d-%b-%y");
+      var parseTime = d3.timeParse("%Y-%m-%d");
       
-      var x = d3.scaleTime().rangeRound([0, width]),
-          y = d3.scaleLinear().rangeRound([height, 0]);
+      var x = d3.scaleTime().rangeRound([0, width]).domain([parseTime("1996-07-01"), parseTime("2006-07-01")]),
+          y = d3.scaleLinear().rangeRound([height, 0]).domain([-1, 11]);
 
-      var line = d3.line()
-        .x(function(d) { return x(d.date); })
-        .y(function(d) { return y(d.close); });
+      var max_temp = new Array(), min_temp = new Array();
+      
+      var rect_width = 45, rect_height = 30;
+
+      var colors = ["#a50026","#d73027","#f46d43","#fdae61","#fee090","#ffffbf","#e0f3f8","#abd9e9","#74add1","#4575b4","#313695"];
+
+      /* x and y axis */
+      g.append("g")
+        .attr("class", "axis axis--x")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x));
+
+      g.append("g")
+        .attr("class", "axis axis--y")
+        .call(d3.axisLeft(y).tickFormat(function(a) {
+          return tick[a];
+        }));
+
+      /* data process */
+      d3.csv("temperature_daily.csv", function(error, data) {
+        if (error) { throw error; }
+        for (var i=0; i<data.length; i++) {
+          var d = data[i];
+          var aaa = d.date.split("-");
+          var key = aaa[0] + "-" + aaa[1], day = aaa[2];
+          if (max_temp[key] != null) {
+            max_temp[key] = Math.max(max_temp[key], d.max_temperature);
+            min_temp[key] = Math.min(min_temp[key], d.min_temperature);
+          }
+          else {
+            max_temp[key] = d.max_temperature;
+            min_temp[key] = d.min_temperature;
+          }
+        }
+        displayMaxTemperature();
+      });
+      
+      /* legends */
+      for (var i = 0; i < 11 ; i++) {
+        hue.append("rect")
+          .attr("x", 30 * i + 10)
+          .attr("y", 0)
+          .attr("width", 30)
+          .attr("height", 30)
+          .style("fill", colors[10-i]);
+      }
+
+      function displayMaxTemperature() {
+        svg.selectAll("rect").remove();
+        document.getElementById("max").style.backgroundColor = "#f08080";
+        document.getElementById("min").style.backgroundColor = "#696969";
+        for (var i=1997; i<2007; i++) {
+          for (var j=1; j<=12; j++) {
+            if (j < 10) { var key = i + "-0" + j; }
+            else { var key = i + "-" + j; }
+            svg.append("rect")
+              .attr("x", margin.left + width / 20 * ((i-1997) * 2 + 1) - rect_width / 2)
+              .attr("y", margin.top + height - height / 12 * j - rect_height / 2)
+              .attr("width", rect_width)
+              .attr("height", rect_height)
+              .style("fill", colors[10 - Math.round(max_temp[key] / 4)])
+              .append("svg:title")
+              .text("Time: " + key + "; max: " + max_temp[key] + "; min: " + min_temp[key]);
+          }
+        }
+      }
+
+      function displayMinTemperature() {        
+        svg.selectAll("rect").remove();
+        document.getElementById("min").style.backgroundColor = "#f08080";
+        document.getElementById("max").style.backgroundColor = "#696969";
+        for (var i=1997; i<2007; i++) {
+          for (var j=1; j<=12; j++) {
+            if (j < 10) { var key = i + "-0" + j; }
+            else { var key = i + "-" + j; }
+            svg.append("rect")
+              .attr("x", margin.left + width / 20 * ((i-1997) * 2 + 1) - rect_width / 2)
+              .attr("y", margin.top + height - height / 12 * j - rect_height / 2)
+              .attr("width", rect_width)
+              .attr("height", rect_height)
+              .style("fill", colors[10 - Math.round(min_temp[key] / 4)])
+              .append("svg:title")
+              .text("Time: " + key + "; max: " + max_temp[key] + "; min: " + min_temp[key]);
+          }
+        }
+      }
     </script>
   </body>
 </html>
