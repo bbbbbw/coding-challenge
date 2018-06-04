@@ -2,15 +2,8 @@
   <head>
     <meta charset="UTF-8">
     <style>
-      #control {
-        height: 80px;
-        width: 680px;
-        background-color: #e6e6e6;
-      }
-      #display {
-        height: 500px;
-        width: 680px;
-        background-color: #b3ffb3;
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       }
       button {
         padding-right: 26px;
@@ -22,6 +15,16 @@
         width: 80px;
         cursor: pointer;
         height: 40px;
+      }
+      #control {
+        height: 120px;
+        width: 680px;
+        background-color: #e6e6e6;
+      }
+      #display {
+        height: 500px;
+        width: 680px;
+        background-color: #b3ffb3;
       }
       #max {
         position: absolute;
@@ -37,34 +40,26 @@
         border-bottom-right-radius: 8px;
         border-top-right-radius: 8px;
       }
-      #hue {
-        position: absolute;
-        top: 40px;
-        left: 250px;
-      }
-      #left-label {
-        font-size: 6;
+      #legends {
         position: absolute;
         top: 20px;
-        left: 240px;
+        left: 255px;
       }
-      #right-label {
-        font-size: 6;
+      #warning {
+        font-size: 10;
         position: absolute;
-        top: 20px;
-        left: 570px;
+        top: 85px;
+        left: 40px;
       }
     </style>
   </head>
   <body>
     <script src="https://d3js.org/d3.v4.min.js"></script>
-    
     <div id="control">
-      <label id="left-label">0 Celsius</label>
-      <label id="right-label">40 Celsius</label>
       <button id="max" onclick="displayMaxTemperature()">Max</button>
       <button id="min" onclick="displayMinTemperature()">Min</button>
-      <svg id="hue" width="400"></svg>
+      <svg id="legends" width="400"></svg>
+      <span id="warning">* Incomplete line charts are <br/>&nbsp;&nbsp; caused by data deficiency.</span>
     </div>
     <div id="display">
       <svg id="display_svg" width="680" height="500"></svg>
@@ -75,7 +70,7 @@
         "July", "August", "September", "October", "November", "Devember"];
 
       var svg = d3.select("#display_svg"),
-          hue = d3.select("#hue"),
+          legends = d3.select("#legends"),
           margin = {top: 30, right: 20, bottom: 30, left: 70},
           width = svg.attr("width") - margin.left - margin.right,
           height = svg.attr("height") - margin.top - margin.bottom,
@@ -90,7 +85,7 @@
       
       var rect_width = 45, rect_height = 30;
 
-      var colors = ["#a50026","#d73027","#f46d43","#fdae61","#fee090","#ffffbf","#e0f3f8","#abd9e9","#74add1","#4575b4","#313695"];
+      var colors = ["#a50026","#d73027","#f46d43","#fdae61","#fee090","#e0f3f8","#abd9e9","#74add1","#4575b4","#313695"];
 
       /* x and y axis */
       g.append("g")
@@ -120,21 +115,8 @@
             min_temp[key] = d.min_temperature;
           }
         }
-        displayMaxTemperature();
-      });
-
-      /* legends */
-      for (var i = 0; i < 11 ; i++) {
-        hue.append("rect")
-          .attr("x", 30 * i + 10)
-          .attr("y", 0)
-          .attr("width", 30)
-          .attr("height", 30)
-          .style("fill", colors[10-i]);
-      }
-
-      function displayMaxTemperature() {
-        svg.selectAll("rect").remove();
+        
+        /* initialize the matrix */
         document.getElementById("max").style.backgroundColor = "#f08080";
         document.getElementById("min").style.backgroundColor = "#696969";
         for (var i=1997; i<2007; i++) {
@@ -146,29 +128,130 @@
               .attr("y", margin.top + height - height / 12 * j - rect_height / 2)
               .attr("width", rect_width)
               .attr("height", rect_height)
+              .attr("id", "a" + key)
               .style("fill", colors[10 - Math.ceil(max_temp[key] / 4)])
               .append("svg:title")
               .text("Time: " + key + "; max: " + max_temp[key] + "; min: " + min_temp[key]);
           }
         }
+
+        /* initialize the line chart */
+        var line = d3.line()
+          .x(function(d) { return d.x * rect_width / 31; })
+          .y(function(d) { return (40 - d.y) * rect_height / 40; });
+
+        var count = 0, current_year = 1997, current_month = 1;
+        while (count < data.length) {
+          var temp_min_data = new Array(), temp_max_data = new Array();
+          while (count < data.length) {
+            var d = data[count];
+            var aaa = d.date.split("-");
+            var year = parseInt(aaa[0]), month = parseInt(aaa[1]), day = parseInt(aaa[2]);
+            if (current_year == year && current_month == month) {
+              temp_min_data.push({"x": day, "y": d.max_temperature});
+              temp_max_data.push({"x": day, "y": d.min_temperature});
+              count++;
+            }
+            else {
+              break;
+            }
+          }
+
+          svg.append("path")
+            .datum(temp_min_data)
+            .attr("fill", "none")
+            .attr("stroke", "MediumSlateBlue")
+            .attr("stroke-linejoin", "round")
+            .attr("stroke-linecap", "round")
+            .attr("stroke-width", 1)
+            .attr("d", line)
+            .attr("transform", "translate(" + calTransformX(current_year) + "," + calTransformY(current_month) + ")");
+          svg.append("path")
+            .datum(temp_max_data)
+            .attr("fill", "none")
+            .attr("stroke", "LawnGreen")
+            .attr("stroke-linejoin", "round")
+            .attr("stroke-linecap", "round")
+            .attr("stroke-width", 1)
+            .attr("d", line)
+            .attr("transform", "translate(" + calTransformX(current_year) + "," + calTransformY(current_month) + ")");
+          
+          current_year = year;
+          current_month = month;
+        }
+      });
+
+      /* legends */
+      for (var i = 0; i < 10 ; i++) {
+        legends.append("rect")
+          .attr("x", 30 * i + 20)
+          .attr("y", 20)
+          .attr("width", 30)
+          .attr("height", 30)
+          .style("fill", colors[9-i])
+          .append("svg:title")
+          .text((i * 4 + 1) + "-" + (i * 4 + 4) + " Celsius");
+      }
+      legends.append("text")
+        .attr("x", 0)
+        .attr("y", 13)
+        .style("font-size", 12)
+        .text("0 Celsius");
+      legends.append("text")
+        .attr("x", 300)
+        .attr("y", 13)
+        .style("font-size", 12)
+        .text("40 Celsius");
+
+      legends.append("circle")
+        .attr("cx", 80)
+        .attr("cy", 67)
+        .attr("r", 7)
+        .style("fill", "MediumSlateBlue");
+      legends.append("circle")
+        .attr("cx", 80)
+        .attr("cy", 90)
+        .attr("r", 7)
+        .style("fill", "LawnGreen");
+      legends.append("text")
+        .attr("x", 100)
+        .attr("y", 72)
+        .style("font-size", 13)
+        .text("Maximun temperature");
+      legends.append("text")
+        .attr("x", 100)
+        .attr("y", 95)
+        .style("font-size", 13)
+        .text("Minimun temperature");
+
+      function calTransformX(year) {
+        return margin.left + width / 20 * ((year-1997) * 2 + 1) - rect_width / 2;
       }
 
-      function displayMinTemperature() {        
-        svg.selectAll("rect").remove();
+      function calTransformY(month) {
+        return margin.top + height - height / 12 * month - rect_height / 2;
+      }
+
+      function displayMaxTemperature() {
+        document.getElementById("max").style.backgroundColor = "#f08080";
+        document.getElementById("min").style.backgroundColor = "#696969";
+        for (var i=1997; i<2007; i++) {
+          for (var j=1; j<=12; j++) {
+            if (j < 10) { var key = i + "-0" + j; }
+            else { var key = i + "-" + j; }
+            d3.select("#a" + key).style("fill", colors[10 - Math.ceil(max_temp[key] / 4)]);
+          }
+        }
+      }
+
+      function displayMinTemperature() {
         document.getElementById("min").style.backgroundColor = "#f08080";
         document.getElementById("max").style.backgroundColor = "#696969";
         for (var i=1997; i<2007; i++) {
           for (var j=1; j<=12; j++) {
             if (j < 10) { var key = i + "-0" + j; }
             else { var key = i + "-" + j; }
-            svg.append("rect")
-              .attr("x", margin.left + width / 20 * ((i-1997) * 2 + 1) - rect_width / 2)
-              .attr("y", margin.top + height - height / 12 * j - rect_height / 2)
-              .attr("width", rect_width)
-              .attr("height", rect_height)
-              .style("fill", colors[10 - Math.ceil(min_temp[key] / 4)])
-              .append("svg:title")
-              .text("Time: " + key + "; max: " + max_temp[key] + "; min: " + min_temp[key]);
+            d3.select("#a" + key).style("fill", colors[10 - Math.ceil(min_temp[key] / 4)]);
           }
         }
       }
