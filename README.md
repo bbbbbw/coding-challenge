@@ -1,2 +1,2 @@
 # coding-challenge
-This is Wang Binren's code for HKUST VisLab Coding Challenge.
+This is bbbbbw's code for HKUST VisLab Coding Challenge.
